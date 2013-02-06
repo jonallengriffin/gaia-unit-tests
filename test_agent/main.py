@@ -1,4 +1,6 @@
 import json
+from mozrunner import Runner
+from optparse import OptionParser
 import sys
 
 import reporters
@@ -99,8 +101,48 @@ class TestAgentServer(WebSocketServerProtocol):
         self.handle_event(command[0], [command[1]])
 
 
-if __name__ == '__main__':
+class GaiaUnitTestRunner(object):
+
+    def __init__(self, binary=None, profile=None):
+        self.binary = binary
+        self.profile = profile
+
+    def run(self):
+        self.runner = Runner.create(binary=self.binary,
+                                    profile_args={'profile': self.profile},
+                                    clean_profile=False)
+        self.runner.start()
+
+
+def cli():
+    parser = OptionParser(usage='%prog [options] test_file_or_dir '
+                                '<test_file_or_dir> ...')
+    parser.add_option("--binary",
+                      action="store", dest="binary",
+                      default=None,
+                      help="path to B2G desktop build binary")
+    parser.add_option("--profile",
+                      action="store", dest="profile",
+                      default=None,
+                      help="path to gaia profile directory")
+
+    options, tests = parser.parse_args()
+    if not options.binary or not options.profile:
+        parser.print_usage()
+        parser.exit('--binary and --profile required')
+    if not tests:
+        parser.print_usage()
+        parser.exit('must specify one or more tests')
+
+    runner = GaiaUnitTestRunner(binary=options.binary,
+                                profile=options.profile)
+    runner.run()
+
+    print 'starting WebSocket Server'
     factory = WebSocketServerFactory("ws://localhost:8789")
     factory.protocol = TestAgentServer
     listenWS(factory)
     reactor.run()
+
+if __name__ == '__main__':
+    cli()
