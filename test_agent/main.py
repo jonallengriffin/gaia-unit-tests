@@ -2,6 +2,7 @@ import json
 from mozrunner import Runner
 from optparse import OptionParser
 import sys
+import time
 
 import reporters
 from twisted.internet import reactor
@@ -9,6 +10,8 @@ from autobahn.websocket import WebSocketServerFactory, \
                                WebSocketServerProtocol, \
                                listenWS
 
+
+tests = None
 
 class TestAgentServer(WebSocketServerProtocol):
 
@@ -18,6 +21,7 @@ class TestAgentServer(WebSocketServerProtocol):
         self.pending_envs = []
 
     def emit(self, event, data):
+        print 'emit', event, data
         command = (event, data)
         self.sendMessage(json.dumps(command))
 
@@ -42,6 +46,7 @@ class TestAgentServer(WebSocketServerProtocol):
             pass
 
     def handle_event(self, event, data):
+        print'handle_event', event, data
         if event == 'set test envs':
             self.pending_envs = data[0]
 
@@ -82,8 +87,8 @@ class TestAgentServer(WebSocketServerProtocol):
                     self.on_envs_complete()
 
     def onOpen(self):
+        print 'onOpen'
         self.increment = self.increment + 1
-        tests = sys.argv[1:len(sys.argv)]
         self.run_tests(tests)
 
     def run_tests(self, tests):
@@ -110,8 +115,11 @@ class GaiaUnitTestRunner(object):
     def run(self):
         self.runner = Runner.create(binary=self.binary,
                                     profile_args={'profile': self.profile},
-                                    clean_profile=False)
+                                    clean_profile=False,
+                                    cmdargs=['--runapp', 'Test Agent'])
         self.runner.start()
+        # XXX how to tell when the test-agent app is ready?
+        time.sleep(20)
 
 
 def cli():
@@ -126,6 +134,7 @@ def cli():
                       default=None,
                       help="path to gaia profile directory")
 
+    global tests
     options, tests = parser.parse_args()
     if not options.binary or not options.profile:
         parser.print_usage()
