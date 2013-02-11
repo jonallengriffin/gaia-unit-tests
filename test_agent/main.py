@@ -3,27 +3,39 @@ from mozrunner import Runner
 from optparse import OptionParser
 import sys
 import time
+import tornado.websocket
+import tornado.ioloop
+import tornado.httpserver
 
 import reporters
-from twisted.internet import reactor
-from autobahn.websocket import WebSocketServerFactory, \
-                               WebSocketServerProtocol, \
-                               listenWS
-
 
 tests = None
 
-class TestAgentServer(WebSocketServerProtocol):
 
-    def __init__(self):
-        self.increment = 0
-        self.envs = {}
-        self.pending_envs = []
+class TestAgentServer(tornado.websocket.WebSocketHandler):
+
+    increment = 0
+    envs = {}
+    pending_envs = []
 
     def emit(self, event, data):
         print 'emit', event, data
         command = (event, data)
-        self.sendMessage(json.dumps(command))
+        self.write_message(json.dumps(command))
+
+    def open(self):
+        print 'onOpen'
+        self.increment = self.increment + 1
+        self.run_tests(tests)
+
+    def run_tests(self, tests):
+        def format(value):
+            if (value[0] != '/'):
+                value = '/' + value
+            return value
+
+        tests = map(format, tests)
+        self.emit('run tests', {'tests': tests})
 
     def on_envs_complete(self):
         exitCode = 0
@@ -35,15 +47,9 @@ class TestAgentServer(WebSocketServerProtocol):
             print '\ntest report: (' + env + ')'
             print '\n'.join(self.envs[env].output)
 
-        # XXX: this is really horrible in some ways but
-        #      it gives the impression of a simple test runner.
-        reactor.stop()
+        self.close()
 
-        # This seems a bit weird to me is the right way?
-        try:
-            sys.exit(exitCode)
-        except(SystemExit):
-            pass
+        sys.exit(exitCode)
 
     def handle_event(self, event, data):
         print'handle_event', event, data
@@ -86,22 +92,14 @@ class TestAgentServer(WebSocketServerProtocol):
                 if (len(self.pending_envs) == 0):
                     self.on_envs_complete()
 
-    def onOpen(self):
-        print 'onOpen'
-        self.increment = self.increment + 1
-        self.run_tests(tests)
+    def on_close(self):
+        print "Closed down"
 
-    def run_tests(self, tests):
-        def format(value):
-            if (value[0] != '/'):
-                value = '/' + value
-            return value
-
-        tests = map(format, tests)
-        self.emit('run tests', {'tests': tests})
-
-    def onMessage(self, data, binary):
-        command = json.loads(data)
+    def on_message(self, m):
+        print "=> %d %s" % (len(m), str(m))
+        if len(str(m)) == 175:
+            self.close(reason='Bye bye')
+        command = json.loads(m)
         # test agent protocol always uses the [event, data] format.
         self.handle_event(command[0], [command[1]])
 
@@ -119,7 +117,7 @@ class GaiaUnitTestRunner(object):
                                     cmdargs=['--runapp', 'Test Agent'])
         self.runner.start()
         # XXX how to tell when the test-agent app is ready?
-        time.sleep(20)
+        time.sleep(15)
 
 
 def cli():
@@ -148,10 +146,10 @@ def cli():
     runner.run()
 
     print 'starting WebSocket Server'
-    factory = WebSocketServerFactory("ws://localhost:8789")
-    factory.protocol = TestAgentServer
-    listenWS(factory)
-    reactor.run()
+    application = tornado.web.Application([(r"/", TestAgentServer), ])
+    http_server = tornado.httpserver.HTTPServer(application)
+    http_server.listen(8789)
+    tornado.ioloop.IOLoop.instance().start()
 
 if __name__ == '__main__':
     cli()
