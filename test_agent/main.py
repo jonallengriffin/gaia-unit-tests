@@ -9,8 +9,6 @@ import tornado.httpserver
 
 import reporters
 
-tests = None
-
 
 class TestAgentServer(tornado.websocket.WebSocketHandler):
 
@@ -18,15 +16,16 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
     envs = {}
     pending_envs = []
 
+    def initialize(self, tests=None):
+        self.tests = tests
+
     def emit(self, event, data):
-        print 'emit', event, data
         command = (event, data)
         self.write_message(json.dumps(command))
 
     def open(self):
-        print 'onOpen'
         self.increment = self.increment + 1
-        self.run_tests(tests)
+        self.run_tests(self.tests)
 
     def run_tests(self, tests):
         def format(value):
@@ -52,7 +51,6 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
         sys.exit(exitCode)
 
     def handle_event(self, event, data):
-        print'handle_event', event, data
         if event == 'set test envs':
             self.pending_envs = data[0]
 
@@ -95,11 +93,8 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
     def on_close(self):
         print "Closed down"
 
-    def on_message(self, m):
-        print "=> %d %s" % (len(m), str(m))
-        if len(str(m)) == 175:
-            self.close(reason='Bye bye')
-        command = json.loads(m)
+    def on_message(self, message):
+        command = json.loads(message)
         # test agent protocol always uses the [event, data] format.
         self.handle_event(command[0], [command[1]])
 
@@ -132,7 +127,6 @@ def cli():
                       default=None,
                       help="path to gaia profile directory")
 
-    global tests
     options, tests = parser.parse_args()
     if not options.binary or not options.profile:
         parser.print_usage()
@@ -146,7 +140,9 @@ def cli():
     runner.run()
 
     print 'starting WebSocket Server'
-    application = tornado.web.Application([(r"/", TestAgentServer), ])
+    application = tornado.web.Application([
+        (r"/", TestAgentServer, {'tests': tests}),
+    ])
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(8789)
     tornado.ioloop.IOLoop.instance().start()
