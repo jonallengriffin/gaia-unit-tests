@@ -47,8 +47,9 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
             if (self.envs[env].failures > 0):
                 exitCode = 1
 
-            print '\ntest report: (' + env + ')'
-            print '\n'.join(self.envs[env].output)
+            if len(self.envs[env].output):
+                print '\ntest report: (' + env + ')'
+                print '\n'.join(self.envs[env].output)
 
         self.close()
         self.runner.cleanup()
@@ -78,7 +79,7 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
 
             # add to pending
             if (test_event == 'start'):
-                self.envs[test_env] = reporters.Spec(stream=False)
+                self.envs[test_env] = reporters.TBPLLogger(stream=False)
 
             # don't process out of order commands
             if not (test_env in self.envs):

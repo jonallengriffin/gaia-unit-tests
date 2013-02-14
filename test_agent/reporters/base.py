@@ -3,8 +3,10 @@
     reporter architecture.
 """
 
+
 PASS_MARK = u"\u2713"
 FAIL_MARK = u"\u2716"
+
 
 class Base:
 
@@ -19,7 +21,7 @@ class Base:
         self.pending = 0
         self.duration = 0
 
-        self.failed_tests = [];
+        self.failed_tests = []
 
         # analytics
         self.indent = 0
@@ -28,9 +30,9 @@ class Base:
 
     def formatError(self, data):
         if not ('err' in data):
-            return '';
+            return ''
 
-        err = data['err'];
+        err = data['err']
 
         out = data['fullTitle']
         out += '\n  ' + err['message'] + '\n'
@@ -41,11 +43,10 @@ class Base:
         if ('stack' in err):
             out += '\n'.join(map(indent, err['stack'].split('\n')))
 
-        return out;
-
+        return out
 
     def epilogue(self):
-        self.report('\n');
+        self.report('\n')
 
         if self.failed_tests:
             for test in self.failed_tests:
@@ -61,12 +62,11 @@ class Base:
     def on_end(self, data):
         self.epilogue()
 
-
-    """ When self.stream_output is true will instantly
-        print results otherwise the results are added
-        to self.output.
-    """
-    def report(self, string, indent = False):
+    def report(self, string, indent=False):
+        """ When self.stream_output is true will instantly
+            print results otherwise the results are added
+            to self.output.
+        """
         if indent:
             string = ('  ' * self.indent) + string
 
@@ -75,12 +75,11 @@ class Base:
         else:
             self.output.append(string)
 
-
-    """ handles test events. The base class
-        is mostly responsible for incrementing the
-        reusable logic that the children then use.
-    """
     def handle_event(self, event, data):
+        """ handles test events. The base class
+            is mostly responsible for incrementing the
+            reusable logic that the children then use.
+        """
         if event == 'pass':
             self.passes += 1
 
@@ -102,7 +101,7 @@ class Base:
             self.duration = data['duration']
             self.suites = data['suites']
 
-        methodName = 'on_' + event.replace(' ', '_');
+        methodName = 'on_' + event.replace(' ', '_')
 
         if (hasattr(self, methodName)):
-            method = getattr(self, methodName)(data)
+            getattr(self, methodName)(data)
