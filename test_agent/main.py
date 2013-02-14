@@ -1,7 +1,10 @@
 import json
 from mozrunner import Runner
 from optparse import OptionParser
+import os
+import shutil
 import sys
+import tempfile
 import time
 import tornado.websocket
 import tornado.ioloop
@@ -16,8 +19,9 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
     envs = {}
     pending_envs = []
 
-    def initialize(self, tests=None):
+    def initialize(self, tests=None, runner=None):
         self.tests = tests
+        self.runner = runner
 
     def emit(self, event, data):
         command = (event, data)
@@ -47,6 +51,7 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
             print '\n'.join(self.envs[env].output)
 
         self.close()
+        self.runner.cleanup()
 
         sys.exit(exitCode)
 
@@ -106,13 +111,23 @@ class GaiaUnitTestRunner(object):
         self.profile = profile
 
     def run(self):
+        self.profile_dir = os.path.join(tempfile.mkdtemp(suffix='.gaiaunittest'),
+                                        'profile')
+        shutil.copytree(self.profile, self.profile_dir)
+
         self.runner = Runner.create(binary=self.binary,
-                                    profile_args={'profile': self.profile},
+                                    profile_args={'profile': self.profile_dir},
                                     clean_profile=False,
                                     cmdargs=['--runapp', 'Test Agent'])
         self.runner.start()
         # XXX how to tell when the test-agent app is ready?
         time.sleep(15)
+
+    def cleanup(self):
+        self.runner.cleanup()
+        shutil.rmtree(os.path.dirname(self.profile_dir))
+
+    __del__ = cleanup
 
 
 def cli():
@@ -141,7 +156,8 @@ def cli():
 
     print 'starting WebSocket Server'
     application = tornado.web.Application([
-        (r"/", TestAgentServer, {'tests': tests}),
+        (r"/", TestAgentServer, {'tests': tests,
+                                 'runner': runner}),
     ])
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(8789)
