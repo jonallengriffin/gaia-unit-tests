@@ -20,6 +20,5 @@ class TBPLLogger(Base):
         self.logger.testEnd(data['title'])
 
     def on_end(self, data):
-        self.logger.info('Passed: %d' % self.passes)
-        self.logger.info('Failed: %d' % self.failures)
-        self.logger.info('Todo: 0')
+        self.logger.info('suite results (pass/fail): %d/%d' %
+                         (self.passes, self.failures))

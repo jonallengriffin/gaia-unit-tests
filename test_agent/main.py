@@ -1,4 +1,5 @@
 import json
+import mozlog
 from mozrunner import Runner
 from optparse import OptionParser
 import os
@@ -18,10 +19,13 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
     increment = 0
     envs = {}
     pending_envs = []
+    passes = 0
+    failures = 0
 
     def initialize(self, tests=None, runner=None):
         self.tests = tests
         self.runner = runner
+        self.logger = mozlog.getLogger('gaia-unit-tests')
 
     def emit(self, event, data):
         command = (event, data)
@@ -53,6 +57,10 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
 
         self.close()
         self.runner.cleanup()
+
+        self.logger.info('Passed: %d' % self.passes)
+        self.logger.info('Failed: %d' % self.failures)
+        self.logger.info('Todo: 0')
 
         sys.exit(exitCode)
 
@@ -91,6 +99,9 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
             if (test_event == 'end'):
                 idx = self.pending_envs.index(test_env)
                 del self.pending_envs[idx]
+
+                self.passes += self.envs[test_env].passes
+                self.failures += self.envs[test_env].failures
 
                 # now that envs are totally complete show results.
                 if (len(self.pending_envs) == 0):
