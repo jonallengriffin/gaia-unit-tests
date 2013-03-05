@@ -121,8 +121,6 @@ class GaiaUnitTestRunner(object):
                                     clean_profile=False,
                                     cmdargs=['--runapp', 'Test Agent'])
         self.runner.start()
-        # XXX how to tell when the test-agent app is ready?
-        time.sleep(15)
 
     def cleanup(self):
         self.runner.cleanup()
@@ -132,8 +130,7 @@ class GaiaUnitTestRunner(object):
 
 
 def cli():
-    parser = OptionParser(usage='%prog [options] test_file_or_dir '
-                                '<test_file_or_dir> ...')
+    parser = OptionParser(usage='%prog [options] <test_file> <test_file> ...')
     parser.add_option("--binary",
                       action="store", dest="binary",
                       default=None,
@@ -148,8 +145,12 @@ def cli():
         parser.print_usage()
         parser.exit('--binary and --profile required')
     if not tests:
-        parser.print_usage()
-        parser.exit('must specify one or more tests')
+        # build a list of tests
+        appsdir = os.path.join(os.path.dirname(os.path.abspath(options.profile)), 'apps')
+        for root, dirs, files in os.walk(appsdir):
+            for file in files:
+                if file[-8:] == '_test.js':
+                    tests.append(os.path.relpath(os.path.join(root, file), appsdir))
 
     runner = GaiaUnitTestRunner(binary=options.binary,
                                 profile=options.profile)
