@@ -14,5 +14,5 @@ Options:
   --profile=PROFILE  path to gaia profile directory
 ````
 
-if <test_file> is omitted, all tests will be run.  Otherwise, <test_file> should
+if &lt;test_file> is omitted, all tests will be run.  Otherwise, &lt;test_file> should
 specified relative to gaia's 'apps' dir.
