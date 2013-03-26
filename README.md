@@ -1,6 +1,6 @@
 Python testrunner for Gaia unit tests
 
-Gaia runner example:
+Gaia runner CLI:
 
 ````sh
 cd gaia-unit-tests
@@ -12,7 +12,7 @@ Options:
   -h, --help         show this help message and exit
   --binary=BINARY    path to B2G desktop build binary
   --profile=PROFILE  path to gaia profile directory
+````
 
 if <test_file> is omitted, all tests will be run.  Otherwise, <test_file> should
 specified relative to gaia's 'apps' dir.
-````
