@@ -1,19 +1,18 @@
-Hack for python test-agent server.
-
-````sh
-pip install autobahn
-# note that paths are not related to the actual file system in this case
-python main.py test/test-agent/inspect-test.js
-```
+Python testrunner for Gaia unit tests
 
 Gaia runner example:
 
 ````sh
-# cd into your local gaia copy ( which I assume you have )
-cd gaia
-# link to js-test-agent python runner (which I assume you have downloaded to ~/workspace/js-test-agent/)
-ln -s ~/workspace/js-test-agent/python .
+cd gaia-unit-tests
+python gaia-unit-tests --help
 
-# the path logic in gaia is (app)(realpath to test)
-python python/test_agent/main.py browser/test/unit/date_helper_test.js calendar/test/unit/calc_test.js
+Usage: main.py [options] <test_file> <test_file> ...
+
+Options:
+  -h, --help         show this help message and exit
+  --binary=BINARY    path to B2G desktop build binary
+  --profile=PROFILE  path to gaia profile directory
+
+if <test_file> is omitted, all tests will be run.  Otherwise, <test_file> should
+specified relative to gaia's 'apps' dir.
 ````
