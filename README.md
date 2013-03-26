@@ -15,4 +15,4 @@ Options:
 ````
 
 if &lt;test_file> is omitted, all tests will be run.  Otherwise, &lt;test_file> should
-specified relative to gaia's 'apps' dir.
+be specified relative to gaia's 'apps' dir.
