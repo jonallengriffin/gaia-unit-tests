@@ -1,11 +1,11 @@
 from base import Base
-import mozlog
 
 
 class TBPLLogger(Base):
     def __init__(self, *args, **kwargs):
+        self.logger = kwargs['logger']
+        del kwargs['logger']
         Base.__init__(self, *args, **kwargs)
-        self.logger = mozlog.getLogger('gaia-unit-tests')
 
     def on_pass(self, data):
         self.logger.testPass(data['fullTitle'])

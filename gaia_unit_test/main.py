@@ -1,4 +1,5 @@
 import json
+import logging
 import mozlog
 from mozrunner import Runner
 from optparse import OptionParser
@@ -6,7 +7,6 @@ import os
 import shutil
 import sys
 import tempfile
-import time
 import tornado.websocket
 import tornado.ioloop
 import tornado.httpserver
@@ -22,10 +22,10 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
     passes = 0
     failures = 0
 
-    def initialize(self, tests=None, runner=None):
+    def initialize(self, tests=None, runner=None, logger=None):
         self.tests = tests
         self.runner = runner
-        self.logger = mozlog.getLogger('gaia-unit-tests')
+        self.logger = logger
 
     def emit(self, event, data):
         command = (event, data)
@@ -87,7 +87,8 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
 
             # add to pending
             if (test_event == 'start'):
-                self.envs[test_env] = reporters.TBPLLogger(stream=False)
+                self.envs[test_env] = reporters.TBPLLogger(stream=False,
+                                                           logger=self.logger)
 
             # don't process out of order commands
             if not (test_env in self.envs):
@@ -109,6 +110,7 @@ class TestAgentServer(tornado.websocket.WebSocketHandler):
 
     def on_close(self):
         print "Closed down"
+        sys.exit(1)
 
     def on_message(self, message):
         command = json.loads(message)
@@ -152,9 +154,11 @@ def cli():
                       help="path to gaia profile directory")
 
     options, tests = parser.parse_args()
+
     if not options.binary or not options.profile:
         parser.print_usage()
         parser.exit('--binary and --profile required')
+
     if not tests:
         # build a list of tests
         appsdir = os.path.join(os.path.dirname(os.path.abspath(options.profile)), 'apps')
@@ -167,10 +171,17 @@ def cli():
                                 profile=options.profile)
     runner.run()
 
+    # Lame but necessary hack to prevent tornado's logger from duplicating
+    # every message from mozlog.
+    logger = logging.getLogger()
+    handler = logging.NullHandler()
+    logger.addHandler(handler)
+
     print 'starting WebSocket Server'
     application = tornado.web.Application([
         (r"/", TestAgentServer, {'tests': tests,
-                                 'runner': runner}),
+                                 'runner': runner,
+                                 'logger': mozlog.getLogger('gaia-unit-tests')}),
     ])
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(8789)
