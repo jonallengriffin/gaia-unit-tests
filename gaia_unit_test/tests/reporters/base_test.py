@@ -1,24 +1,22 @@
 import unittest
-from test_agent.reporters.base import Base
+from gaia_unit_test.reporters.base import Base
 import factory
 
 
-# XXX: eerily reminds me of my php days.
-#      would this be the right way to test this???
 class BaseExtended(Base):
     def __init__(self, flag):
-        Base.__init__(self, flag);
-        self.calledWith = None;
+        Base.__init__(self, flag)
+        self.calledWith = None
 
     # whitespace case
     def on_test_end(self, data):
-        self.calledWith = data;
+        self.calledWith = data
+
 
 class BaseTestCase(unittest.TestCase):
 
     def setUp(self):
         self.subject = Base(False)
-
 
     def test_initailize(self):
         self.assertEqual(self.subject.passes, 0)
@@ -26,18 +24,16 @@ class BaseTestCase(unittest.TestCase):
         self.assertEqual(self.subject.duration, 0)
         self.assertEqual(self.subject.indent, 0)
 
-
     def test_report(self):
         subject = self.subject
 
-        subject.report('foo');
+        subject.report('foo')
         self.assertEqual(subject.output[0], 'foo')
 
-        subject.indent = 2;
+        subject.indent = 2
 
-        subject.report('xfoo', True);
-        self.assertEqual(subject.output[1], '    xfoo');
-
+        subject.report('xfoo', True)
+        self.assertEqual(subject.output[1], '    xfoo')
 
     def test_handle_event(self):
         subject = self.subject
@@ -46,10 +42,10 @@ class BaseTestCase(unittest.TestCase):
         self.assertEqual(subject.passes, 1)
 
         # fail
-        expected_fail = factory.failed();
-        subject.handle_event('fail', expected_fail);
+        expected_fail = factory.failed()
+        subject.handle_event('fail', expected_fail)
         self.assertEqual(subject.failures, 1)
-        self.assertEqual(subject.failed_tests[0], expected_fail);
+        self.assertEqual(subject.failed_tests[0], expected_fail)
 
         # indent
         subject.handle_event('suite', factory.suite())
@@ -68,11 +64,10 @@ class BaseTestCase(unittest.TestCase):
         self.assertEqual(subject.duration, 123)
         self.assertEqual(subject.suites, 10)
 
-
     def test_handle_event_extended(self):
         subject = BaseExtended(False)
 
-        inputObj = { 'foo': 'bar' }
+        inputObj = {'foo': 'bar'}
 
         subject.handle_event('test end', inputObj)
         self.assertDictContainsSubset(inputObj, subject.calledWith)
@@ -82,3 +77,6 @@ class BaseTestCase(unittest.TestCase):
         # should be silently ignored...
         subject.handle_event('random thing', 'foo')
         self.assertEqual(self.calledWith, None)
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)

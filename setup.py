@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-version = '0.1'
+version = '0.2'
 
 # get documentation from the README
 try:
@@ -13,7 +13,7 @@ except (OSError, IOError):
 # dependencies
 deps = ['tornado >= 2.4.1', 'mozlog >= 1.1', 'mozrunner >= 5.15']
 
-setup(name='gaia-unit-test',
+setup(name='gaia_unit_test',
       version=version,
       description="Python testrunner for Gaia unit tests",
       long_description=description,
